@@ -7,8 +7,41 @@ import "react-toastify/dist/ReactToastify.css";
 import axios from "axios";
 import { BiPowerOff } from "react-icons/bi";
 import ChatInput from './ChatInput.js';
+import { addMessageRoute, getMessagesRoute } from '../Api/ApiRoute.js';
 
 export const ContainerChat = ({currentContact}) => {
+  const [messages, setMessages] = useState([]);
+  
+  const getMessages = async () => {
+    const user = await JSON.parse(localStorage.getItem("current-user"))
+    const response = await axios.post(getMessagesRoute, {
+      from: user?._id,
+      to: currentContact?._id,
+    });
+    setMessages(response.data);
+  }
+
+  useEffect(() => {
+    getMessages();
+   }, [currentContact]);
+
+   const handleSendMsg = async (msg) => {
+    console.log(msg);
+    const user = await JSON.parse(
+      localStorage.getItem("current-user")
+    );
+   
+    await axios.post(addMessageRoute, {
+      from: user?._id,
+      to: currentContact?._id,
+      message: msg,
+    });
+
+    const msgs = [...messages];
+    msgs.push({ fromSelf: true, message: msg });
+    setMessages(msgs);
+  };
+
   return (
         <Container>
             <div className='header'>
@@ -29,10 +62,28 @@ export const ContainerChat = ({currentContact}) => {
                   </button>
               </div>
             </div>
-            <div className='chatmessage'>
-                 <h2>{`hello ${currentContact?.name} !`}</h2>
+            {messages.length > 0 ? (
+            <div className="chat-messages">
+                {messages?.map((message) => {
+                      return (
+                           <div>
+                              <div className={`message ${
+                                  message.fromSelf ? "sended" : "recieved"
+                                 }`}
+                               >
+                            <div className="content ">
+                                 <span>{message.message}</span>
+                            </div>
+                           </div>
             </div>
-            <ChatInput/>
+          );
+        })}
+       </div>): (
+              <div className='chatmessage'>
+                 <h2>{`hello ${currentContact?.name} !`} </h2>
+             </div>)}
+    
+            <ChatInput handleSendMsg={handleSendMsg}/>
         </Container>
   )
 }
@@ -85,4 +136,48 @@ const Container = styled.div`
             color:#bab9bb;
         }
      }
+
+     .chat-messages {
+      padding: 1rem 2rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      overflow: auto;
+      &::-webkit-scrollbar {
+        width: 0.2rem;
+        &-thumb {
+          background-color: #ffffff39;
+          width: 0.1rem;
+          border-radius: 1rem;
+        }
+      }
+      .message {
+        display: flex;
+        align-items: center;
+        
+        .content {
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          text-align: center;
+          max-width: 50%;
+          font-size: 1.1rem;
+          border-radius: 0.9rem;
+          color: #d1d1d1;
+          padding:0.8rem;
+        }
+      }
+      .sended {
+        justify-content: flex-end;
+        .content {
+          background-color:#5f96a2;
+        }
+      }
+      .recieved {
+        justify-content: flex-start;
+        .content {
+          background-color: #9900ff20;
+        }
+      }
+    }
 `

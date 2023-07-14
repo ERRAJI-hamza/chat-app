@@ -5,6 +5,7 @@ import cors from "cors";
 import colors from "colors"
 import connectDB from "./config/db.js";
 import userRoute from "./routes/userRoute.js"
+import messageRoute from "./routes/messageRoute.js"
 
 //configure env
 dotenv.config();
@@ -22,6 +23,7 @@ app.use(morgan("dev"));
 
 //routes
 app.use("/api/user", userRoute);
+app.use("/api/chat", messageRoute);
 
 //rest api
 app.get('/',(req,res) => {
