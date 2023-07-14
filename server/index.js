@@ -6,6 +6,7 @@ import colors from "colors"
 import connectDB from "./config/db.js";
 import userRoute from "./routes/userRoute.js"
 import messageRoute from "./routes/messageRoute.js"
+import { Server } from "socket.io";
 
 //configure env
 dotenv.config();
@@ -35,6 +36,29 @@ app.get('/',(req,res) => {
 //port
 const PORT = process.env.PORT || 5000;
 
-app.listen(PORT,() => {
+const server = app.listen(PORT,() => {
     console.log(`Server runing on ${PORT}`.bgCyan.white);
 })
+
+
+const io = new Server(server, {
+    cors: {
+      origin: "http://localhost:3000",
+      credentials: true,
+    },
+  });
+  
+  global.onlineUsers = new Map();
+  io.on("connection", (socket) => {
+    global.chatSocket = socket;
+    socket.on("add-user", (userId) => {
+      onlineUsers.set(userId, socket.id);
+    });
+  
+    socket.on("send-msg", (data) => {
+      const sendUserSocket = onlineUsers.get(data.to);
+      if (sendUserSocket) {
+        socket.to(sendUserSocket).emit("msg-recieve", data.msg);
+      }
+    });
+  });

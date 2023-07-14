@@ -1,4 +1,4 @@
-import React ,{useEffect, useState} from 'react'
+import React ,{useEffect, useState,useRef} from 'react'
 import { Link, useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import say_logo from '../images/say_logo.png'
@@ -8,9 +8,12 @@ import axios from "axios";
 import { BiPowerOff } from "react-icons/bi";
 import ChatInput from './ChatInput.js';
 import { addMessageRoute, getMessagesRoute } from '../Api/ApiRoute.js';
+import { v4 as uuidv4 } from "uuid";
 
-export const ContainerChat = ({currentContact}) => {
+export const ContainerChat = ({currentContact ,socket}) => {
   const [messages, setMessages] = useState([]);
+  const  scrollRef = useRef();
+  const [arrivalMessage, setArrivalMessage] = useState(null);
   
   const getMessages = async () => {
     const user = await JSON.parse(localStorage.getItem("current-user"))
@@ -23,14 +26,18 @@ export const ContainerChat = ({currentContact}) => {
 
   useEffect(() => {
     getMessages();
-   }, [currentContact]);
+   }, [messages]);
 
    const handleSendMsg = async (msg) => {
     console.log(msg);
     const user = await JSON.parse(
       localStorage.getItem("current-user")
     );
-   
+    socket.current.emit("send-msg", {
+      to: currentContact?._id,
+      from: user?._id,
+      msg,
+    });
     await axios.post(addMessageRoute, {
       from: user?._id,
       to: currentContact?._id,
@@ -41,6 +48,22 @@ export const ContainerChat = ({currentContact}) => {
     msgs.push({ fromSelf: true, message: msg });
     setMessages(msgs);
   };
+
+  useEffect(() => {
+    if (socket.current) {
+      socket.current.on("msg-recieve", (msg) => {
+        setArrivalMessage({ fromSelf: false, message: msg });
+      });
+    }
+  }, []);
+
+  useEffect(() => {
+    arrivalMessage && setMessages((prev) => [...prev, arrivalMessage]);
+  }, [arrivalMessage]);
+
+  useEffect(() => {
+    scrollRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
 
   return (
         <Container>
@@ -66,7 +89,7 @@ export const ContainerChat = ({currentContact}) => {
             <div className="chat-messages">
                 {messages?.map((message) => {
                       return (
-                           <div>
+                           <div ref={scrollRef} key={uuidv4()}>
                               <div className={`message ${
                                   message.fromSelf ? "sended" : "recieved"
                                  }`}
@@ -170,7 +193,7 @@ const Container = styled.div`
       .sended {
         justify-content: flex-end;
         .content {
-          background-color:#5f96a2;
+          background-color:#b745b7;
         }
       }
       .recieved {
